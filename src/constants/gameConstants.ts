@@ -8,8 +8,8 @@ export const LINES_PER_LEVEL = 10;
 export const TETROMINOES = {
   I: {
     shape: [
-      [0, 0, 0, 0],
       [1, 1, 1, 1],
+      [0, 0, 0, 0],
       [0, 0, 0, 0],
       [0, 0, 0, 0],
     ],

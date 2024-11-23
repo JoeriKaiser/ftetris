@@ -34,7 +34,7 @@ const hasCollision = (
   return false;
 };
 
-const createEmptyGrid = () => 
+const createEmptyGrid = () =>
   Array(GRID_HEIGHT).fill(null).map(() => Array(GRID_WIDTH).fill(0));
 
 const getRandomTetromino = () => {
@@ -42,23 +42,23 @@ const getRandomTetromino = () => {
   const type = types[Math.floor(Math.random() * types.length)];
   return {
     type,
-    position: { 
+    position: {
       x: Math.floor(GRID_WIDTH / 2) - Math.floor(TETROMINOES[type].shape[0].length / 2),
-      y: 0 
+      y: 0
     },
     rotation: 0,
   };
 };
 
 const rotateMatrix = (matrix: readonly number[][]): readonly number[][] => {
-    const N = matrix.length;
-    const rotated = Array(N).fill(0).map(() => Array(N).fill(0));
-    for (let y = 0; y < N; y++) {
-      for (let x = 0; x < N; x++) {
-        rotated[y][x] = matrix[N - 1 - x][y];
-      }
+  const N = matrix.length;
+  const rotated = Array(N).fill(0).map(() => Array(N).fill(0));
+  for (let y = 0; y < N; y++) {
+    for (let x = 0; x < N; x++) {
+      rotated[y][x] = matrix[N - 1 - x][y];
     }
-    return rotated as readonly number[][];
+  }
+  return rotated as readonly number[][];
 };
 
 const clearLines = (grid: number[][]): { newGrid: number[][], linesCleared: number } => {
@@ -93,12 +93,12 @@ const WALL_KICK_DATA = {
 } as const;
 
 const getGhostPosition = (grid: number[][], piece: Tetromino): Position => {
-  let ghostPosition = { ...piece.position };
-  
+  const ghostPosition = { ...piece.position };
+
   while (!hasCollision(grid, { ...piece, position: { ...ghostPosition, y: ghostPosition.y + 1 } })) {
     ghostPosition.y++;
   }
-  
+
   return ghostPosition;
 };
 
@@ -108,25 +108,25 @@ const tryWallKick = (
   newRotation: number
 ): Position | null => {
   const kicks = WALL_KICK_DATA[piece.type === 'I' ? 'I' : 'JLSTZ'][piece.rotation];
-  
+
   for (const [offsetX, offsetY] of kicks) {
     const newPosition = {
       x: piece.position.x + offsetX,
       y: piece.position.y + offsetY
     };
-    
+
     if (!hasCollision(grid, { ...piece, position: newPosition, rotation: newRotation })) {
       return newPosition;
     }
   }
-  
+
   return null;
 };
 
 const lockPiece = (grid: number[][], piece: Tetromino): number[][] => {
   const newGrid = grid.map(row => [...row]);
   let shape = [...TETROMINOES[piece.type].shape.map(row => [...row] as (0 | 1)[])];
-  
+
   for (let i = 0; i < piece.rotation; i++) {
     shape = rotateMatrix(shape) as number[][] as (0 | 1)[][];
   }
@@ -156,6 +156,9 @@ interface GameStore extends GameState {
   tick: () => void;
   ghostPiece: Position | null;
   gameInterval: NodeJS.Timeout | null;
+  isPaused: boolean;
+  pauseGame: () => void;
+  resumeGame: () => void;
 }
 
 export const useGameStore = create<GameStore>()((set, get) => ({
@@ -167,6 +170,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
   isGameOver: false,
   ghostPiece: null,
   gameInterval: null,
+  isPaused: false,
 
   moveLeft: () => {
     const { currentPiece, grid } = get();
@@ -176,7 +180,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     };
 
     if (!hasCollision(grid, { ...currentPiece, position: newPosition })) {
-      set({ 
+      set({
         currentPiece: { ...currentPiece, position: newPosition },
         ghostPiece: getGhostPosition(grid, { ...currentPiece, position: newPosition })
       });
@@ -191,7 +195,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     };
 
     if (!hasCollision(grid, { ...currentPiece, position: newPosition })) {
-      set({ 
+      set({
         currentPiece: { ...currentPiece, position: newPosition },
         ghostPiece: getGhostPosition(grid, { ...currentPiece, position: newPosition })
       });
@@ -206,7 +210,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     };
 
     if (!hasCollision(grid, { ...currentPiece, position: newPosition })) {
-      set({ 
+      set({
         currentPiece: { ...currentPiece, position: newPosition },
         ghostPiece: getGhostPosition(grid, { ...currentPiece, position: newPosition })
       });
@@ -238,7 +242,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
   hardDrop: () => {
     const { currentPiece, grid } = get();
-    let newPosition = { ...currentPiece.position };
+    const newPosition = { ...currentPiece.position };
 
     while (!hasCollision(grid, { ...currentPiece, position: { ...newPosition, y: newPosition.y + 1 } })) {
       newPosition.y++;
@@ -254,12 +258,12 @@ export const useGameStore = create<GameStore>()((set, get) => ({
 
     const newPiece = getRandomTetromino();
     const emptyGrid = createEmptyGrid();
-    
+
     const newInterval = setInterval(() => {
-      const { isGameOver } = get();
-      if (!isGameOver) {
+      const { isGameOver, isPaused } = get();
+      if (!isGameOver && !isPaused) {
         get().tick();
-      } else {
+      } else if (isGameOver) {
         clearInterval(newInterval);
       }
     }, INITIAL_SPEED);
@@ -271,6 +275,7 @@ export const useGameStore = create<GameStore>()((set, get) => ({
       score: 0,
       level: 1,
       isGameOver: false,
+      isPaused: false,
       ghostPiece: getGhostPosition(emptyGrid, newPiece),
       gameInterval: newInterval
     });
@@ -285,10 +290,10 @@ export const useGameStore = create<GameStore>()((set, get) => ({
     const newRotation = (currentPiece.rotation + 1) % 4;
 
     if (!hasCollision(grid, { ...currentPiece, rotation: newRotation })) {
-      set({ 
-        currentPiece: { 
-          ...currentPiece, 
-          rotation: newRotation 
+      set({
+        currentPiece: {
+          ...currentPiece,
+          rotation: newRotation
         },
         ghostPiece: getGhostPosition(grid, { ...currentPiece, rotation: newRotation })
       });
@@ -310,5 +315,29 @@ export const useGameStore = create<GameStore>()((set, get) => ({
         })
       });
     }
+  },
+
+  pauseGame: () => {
+    const { gameInterval } = get();
+    if (gameInterval) {
+      clearInterval(gameInterval);
+    }
+    set({ gameInterval: null, isPaused: true });
+  },
+
+  resumeGame: () => {
+    const { isPaused } = get();
+    if (!isPaused) return;
+
+    const newInterval = setInterval(() => {
+      const { isGameOver, isPaused } = get();
+      if (!isGameOver && !isPaused) {
+        get().tick();
+      } else if (isGameOver) {
+        clearInterval(newInterval);
+      }
+    }, INITIAL_SPEED);
+
+    set({ gameInterval: newInterval, isPaused: false });
   },
 })); 
