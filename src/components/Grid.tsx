@@ -17,7 +17,7 @@ const Grid: React.FC = () => {
       }
       rotated = newRotated;
     }
-    return rotated as readonly number[][];
+      return rotated as readonly number[][];
   };
 
   const renderCell = (cell: number, x: number, y: number) => {

@@ -128,9 +128,11 @@ const Game: React.FC = () => {
               )}
             </AnimatePresence>
           </div>
-          <ThemeToggle />
           <NextPiece />
           <ScoreBoard />
+          <div className='bottom-0'>
+            <ThemeToggle />
+          </div>
         </div>
       </div>
       {isGameOver && (
